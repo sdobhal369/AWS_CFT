@@ -1,0 +1,80 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Demo API GATEWAY
+
+Resources:
+
+  ApiGatewaysRestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: edge-stride-api
+      EndpointConfiguration:
+        Types: 
+          - REGIONAL
+  ApiGatewaycoreResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGatewaysRestApi
+      ParentId: !GetAtt ApiGatewaysRestApi.RootResourceId
+      PathPart: 'core'  
+  ApiGatewaycoreverifypaymentResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref ApiGatewaysRestApi
+      ParentId: !Ref ApiGatewaycoreResource
+      PathPart: 'verify-payment'   
+  ApiGatewaycoreverifypaymentMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: 'GET'
+      RequestParameters: 
+        method.request.querystring.uid: true
+        method.request.header.name: true
+      RequestValidatorId: !Ref RequestValidator
+      MethodResponses: 
+        - StatusCode: '200'
+      Integration:
+        IntegrationHttpMethod: GET
+        Type: HTTP_PROXY
+        Uri: http://demo-lb-657045241.us-east-2.elb.amazonaws.com
+        IntegrationResponses:
+          - StatusCode: '200'
+      ResourceId: !Ref ApiGatewaycoreverifypaymentResource
+      RestApiId: !Ref ApiGatewaysRestApi    
+  RequestValidator:
+    Type: AWS::ApiGateway::RequestValidator
+    Properties:
+      Name: ValidateRequestParam
+      RestApiId: !Ref ApiGatewaysRestApi 
+      ValidateRequestBody: true
+      ValidateRequestParameters: true    
+  ApiGatewaycoreverifypaymentoptionalMethod:
+   Type: AWS::ApiGateway::Method 
+   Properties:
+    ApiKeyRequired: false 
+    RestApiId: !Ref ApiGatewaysRestApi 
+    ResourceId: !Ref ApiGatewaycoreverifypaymentResource 
+    HttpMethod: OPTIONS 
+    AuthorizationType: NONE 
+    Integration: 
+     IntegrationResponses: 
+      - StatusCode: 200 
+        ResponseParameters: 
+         method.response.header.Access-Control-Allow-Headers: "'Access-Control-Allow-Origin,bf,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'" 
+         method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'" 
+         method.response.header.Access-Control-Allow-Origin: "'*'" 
+        ResponseTemplates: 
+         application/json: '' 
+     PassthroughBehavior: WHEN_NO_MATCH 
+     RequestTemplates: 
+      application/json: '{"statusCode": 200}' 
+     Type: MOCK 
+    MethodResponses: 
+    - StatusCode: 200 
+      ResponseModels: 
+        application/json: 'Empty' 
+      ResponseParameters: 
+        method.response.header.Access-Control-Allow-Headers: false 
+        method.response.header.Access-Control-Allow-Methods: false 
+        method.response.header.Access-Control-Allow-Origin: false
+ 
